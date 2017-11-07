@@ -2,6 +2,8 @@
 name = "hmac-drbg"
 version = "0.1.0"
 authors = ["Wei Tang <hi@that.world>"]
+description = "Pure Rust implementation of Hmac DRBG."
+license = "Apache-2.0"
 
 [dependencies]
 digest = "0.6"
