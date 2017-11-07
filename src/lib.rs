@@ -16,6 +16,7 @@ pub struct HmacDrbg<D>
     digest: D,
     k: MacResult<D::OutputSize>,
     v: MacResult<D::OutputSize>,
+    count: usize,
 }
 
 impl<D> HmacDrbg<D>
@@ -39,11 +40,21 @@ impl<D> HmacDrbg<D>
             digest: D::default(),
             k: MacResult::new(k),
             v: MacResult::new(v),
+            count: 0,
         };
 
         this.update(&[entropy, nonce, pers]);
+        this.count = 1;
 
         this
+    }
+
+    pub fn count(&self) -> usize {
+        self.count
+    }
+
+    pub fn reseed(&mut self, entropy: &[u8], add: Option<&[u8]>) {
+        self.update(&[entropy, add.unwrap_or(&[])])
     }
 
     fn hmac(&self) -> Hmac<D> {
