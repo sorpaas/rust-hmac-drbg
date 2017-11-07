@@ -1,0 +1,9 @@
+[package]
+name = "hmac-drbg"
+version = "0.1.0"
+authors = ["Wei Tang <hi@that.world>"]
+
+[dependencies]
+digest = "0.6"
+generic-array = "0.8"
+typenum = "1.9"
