@@ -14,11 +14,31 @@ use core::ops::Div;
 pub struct HmacDrbg<D>
     where D: Input + BlockInput + FixedOutput + Default,
           D::BlockSize: ArrayLength<u8>,
-          D::OutputSize: ArrayLength<u8>,
-          D::OutputSize: Div<U8>,
-          <D::OutputSize as Div<U8>>::Output: ArrayLength<u8>
+          D::OutputSize: ArrayLength<u8>
 {
     digest: D,
-    k: GenericArray<u8, Quot<D::OutputSize, U8>>,
-    v: GenericArray<u8, Quot<D::OutputSize, U8>>,
+    k: GenericArray<u8, D::OutputSize>,
+    v: GenericArray<u8, D::OutputSize>,
+}
+
+impl<D> HmacDrbg<D>
+    where D: Input + BlockInput + FixedOutput + Default,
+          D::BlockSize: ArrayLength<u8>,
+          D::OutputSize: ArrayLength<u8>
+{
+    pub fn raw(
+        digest: D,
+        k: GenericArray<u8, D::OutputSize>,
+        v: GenericArray<u8, D::OutputSize>
+    ) -> Self {
+        Self { digest, k, v }
+    }
+
+    pub fn k(&self) -> &GenericArray<u8, D::OutputSize> {
+        &self.k
+    }
+
+    pub fn v(&self) -> &GenericArray<u8, D::OutputSize> {
+        &self.v
+    }
 }

@@ -7,3 +7,6 @@ authors = ["Wei Tang <hi@that.world>"]
 digest = "0.6"
 generic-array = "0.8"
 typenum = "1.9"
+
+[dev-dependencies]
+sha2 = "0.6"
