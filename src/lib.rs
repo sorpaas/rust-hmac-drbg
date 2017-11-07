@@ -43,7 +43,7 @@ impl<D> HmacDrbg<D>
             count: 0,
         };
 
-        this.update(&[entropy, nonce, pers]);
+        this.update(Some(&[entropy, nonce, pers]));
         this.count = 1;
 
         this
@@ -54,25 +54,61 @@ impl<D> HmacDrbg<D>
     }
 
     pub fn reseed(&mut self, entropy: &[u8], add: Option<&[u8]>) {
-        self.update(&[entropy, add.unwrap_or(&[])])
+        self.update(Some(&[entropy, add.unwrap_or(&[])]))
+    }
+
+    pub fn generate(&mut self, result: &mut [u8], add: Option<&[u8]>) {
+        if let Some(add) = add {
+            self.update(Some(&[add]));
+        }
+
+        let mut i = 0;
+        while i < result.len() {
+            let mut vmac = self.hmac();
+            vmac.input(self.v.code());
+            self.v = vmac.result();
+
+            for j in 0..self.v.code().len() {
+                result[i + j] = self.v.code()[j];
+            }
+            i += self.v.code().len();
+        }
+
+        match add {
+            Some(add) => {
+                self.update(Some(&[add]));
+            },
+            None => {
+                self.update(None);
+            },
+        }
+        self.count += 1;
     }
 
     fn hmac(&self) -> Hmac<D> {
         Hmac::new(self.k.code())
     }
 
-    fn update(&mut self, seeds: &[&[u8]]) {
+    fn update(&mut self, seeds: Option<&[&[u8]]>) {
         let mut kmac = self.hmac();
         kmac.input(self.v.code());
         kmac.input(&[0x00]);
-        for seed in seeds {
-            kmac.input(seed);
+        if let Some(seeds) = seeds {
+            for seed in seeds {
+                kmac.input(seed);
+            }
         }
         self.k = kmac.result();
 
         let mut vmac = self.hmac();
         vmac.input(self.v.code());
         self.v = vmac.result();
+
+        if seeds.is_none() {
+            return;
+        }
+
+        let seeds = seeds.unwrap();
 
         let mut kmac = self.hmac();
         kmac.input(self.v.code());
