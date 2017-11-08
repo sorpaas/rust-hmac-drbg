@@ -12,3 +12,4 @@ hmac = "0.4"
 
 [dev-dependencies]
 sha2 = "0.6"
+etcommon-hexutil = "0.2"
