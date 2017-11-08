@@ -57,7 +57,13 @@ impl<D> HmacDrbg<D>
         self.update(Some(&[entropy, add.unwrap_or(&[])]))
     }
 
-    pub fn generate(&mut self, result: &mut [u8], add: Option<&[u8]>) {
+    pub fn generate<T: ArrayLength<u8>>(&mut self, add: Option<&[u8]>) -> GenericArray<u8, T> {
+        let mut result = GenericArray::default();
+        self.generate_to_slice(result.as_mut_slice(), add);
+        result
+    }
+
+    pub fn generate_to_slice(&mut self, result: &mut [u8], add: Option<&[u8]>) {
         if let Some(add) = add {
             self.update(Some(&[add]));
         }
