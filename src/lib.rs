@@ -8,7 +8,7 @@ use digest::{Input, BlockInput, FixedOutput};
 use generic_array::{ArrayLength, GenericArray};
 use hmac::{Mac, Hmac, MacResult};
 
-pub struct HmacDrbg<D>
+pub struct HmacDRBG<D>
     where D: Input + BlockInput + FixedOutput + Default,
           D::BlockSize: ArrayLength<u8>,
           D::OutputSize: ArrayLength<u8>
@@ -19,7 +19,7 @@ pub struct HmacDrbg<D>
     count: usize,
 }
 
-impl<D> HmacDrbg<D>
+impl<D> HmacDRBG<D>
     where D: Input + BlockInput + FixedOutput + Default,
           D::BlockSize: ArrayLength<u8>,
           D::OutputSize: ArrayLength<u8>

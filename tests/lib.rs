@@ -17,7 +17,7 @@ extern crate serde_derive;
 
 #[test]
 fn test1_sha256() {
-    let mut drbg = HmacDrbg::<Sha256>::new(
+    let mut drbg = HmacDRBG::<Sha256>::new(
         "totally random0123456789".as_bytes(),
         "secret nonce".as_bytes(),
         "my drbg".as_bytes());
@@ -26,7 +26,7 @@ fn test1_sha256() {
 
 #[test]
 fn test2_sha256() {
-    let mut drbg = HmacDrbg::<Sha256>::new(
+    let mut drbg = HmacDRBG::<Sha256>::new(
         "totally random0123456789".as_bytes(),
         "secret nonce".as_bytes(),
         &[]);
@@ -35,11 +35,11 @@ fn test2_sha256() {
 
 #[test]
 fn reseeding() {
-    let mut original = HmacDrbg::<Sha256>::new(
+    let mut original = HmacDRBG::<Sha256>::new(
         "totally random string with many chars that I typed in agony".as_bytes(),
         "nonce".as_bytes(),
         "pers".as_bytes());
-    let mut reseeded = HmacDrbg::<Sha256>::new(
+    let mut reseeded = HmacDRBG::<Sha256>::new(
         "totally random string with many chars that I typed in agony".as_bytes(),
         "nonce".as_bytes(),
         "pers".as_bytes());
@@ -64,7 +64,7 @@ fn nist_victors() {
     let tests: Vec<Fixture> = serde_json::from_str(include_str!("./fixtures/hmac-drbg-nist.json")).unwrap();
 
     for test in tests {
-        let mut drbg = HmacDrbg::<Sha256>::new(
+        let mut drbg = HmacDRBG::<Sha256>::new(
             &read_hex(&test.entropy).unwrap(),
             &read_hex(&test.nonce).unwrap(),
             &read_hex(&test.pers.unwrap_or("".to_string())).unwrap());
