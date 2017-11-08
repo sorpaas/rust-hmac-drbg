@@ -10,6 +10,11 @@ use generic_array::GenericArray;
 use hexutil::*;
 use typenum::consts::*;
 
+extern crate serde;
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
+
 #[test]
 fn test1_sha256() {
     let mut drbg = HmacDrbg::<Sha256>::new(
@@ -42,4 +47,47 @@ fn reseeding() {
     assert_eq!(original.generate::<U32>(None), reseeded.generate::<U32>(None));
     reseeded.reseed("another absolutely random string".as_bytes(), None);
     assert_ne!(original.generate::<U32>(None), reseeded.generate::<U32>(None));
+}
+
+#[test]
+fn nist_victors() {
+    #[derive(Deserialize, Debug)]
+    struct Fixture {
+        name: String,
+        entropy: String,
+        nonce: String,
+        pers: Option<String>,
+        add: [Option<String>; 2],
+        expected: String,
+    }
+
+    let tests: Vec<Fixture> = serde_json::from_str(include_str!("./fixtures/hmac-drbg-nist.json")).unwrap();
+
+    for test in tests {
+        let mut drbg = HmacDrbg::<Sha256>::new(
+            &read_hex(&test.entropy).unwrap(),
+            &read_hex(&test.nonce).unwrap(),
+            &read_hex(&test.pers.unwrap_or("".to_string())).unwrap());
+        let mut expected = read_hex(&test.expected).unwrap();
+        let mut result = Vec::new();
+        result.resize(expected.len(), 0);
+
+        let half_len = result.len() / 2;
+        let full_len = result.len();
+
+        let add0 = test.add[0].as_ref().map(|v| read_hex(&v).unwrap());
+        let add1 = test.add[1].as_ref().map(|v| read_hex(&v).unwrap());
+
+        drbg.generate_to_slice(&mut result[0..full_len],
+                               match add0 {
+                                   Some(ref add0) => Some(add0.as_ref()),
+                                   None => None,
+                               });
+        drbg.generate_to_slice(&mut result[0..full_len],
+                               match add1 {
+                                   Some(ref add1) => Some(add1.as_ref()),
+                                   None => None,
+                               });
+        assert_eq!(result, expected);
+    }
 }
