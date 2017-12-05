@@ -1,6 +1,6 @@
 # Hmac DRBG
 
-[![Build Status](https://travis-ci.org/ethereumproject/hmac-drbg-rs.svg?branch=master)](https://travis-ci.org/ethereumproject/hmac-drbg-rs)
+[![Build Status](https://travis-ci.org/sorpaas/hmac-drbg-rs.svg?branch=master)](https://travis-ci.org/sorpaas/hmac-drbg-rs)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 [![Cargo](https://img.shields.io/crates/v/hmac-drbg.svg)](https://crates.io/crates/hmac-drbg)
 
