@@ -112,7 +112,7 @@ where
             vmac.input(&self.v);
             self.v = vmac.result().code();
 
-            // K = HMAC(K, V || 0x00 || input)
+            // K = HMAC(K, V || 0x01 || input)
             let mut kmac = self.hmac();
             kmac.input(&self.v);
             kmac.input(&[0x01]);
