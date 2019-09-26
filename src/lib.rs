@@ -1,28 +1,23 @@
 #![no_std]
 
-extern crate hmac;
-extern crate digest;
-extern crate generic_array;
-
-use digest::{Input, BlockInput, FixedOutput};
+use digest::{Input, BlockInput, FixedOutput, Reset};
 use generic_array::{ArrayLength, GenericArray};
-use hmac::{Mac, Hmac, MacResult};
+use hmac::{Mac, Hmac};
 
 pub struct HmacDRBG<D>
     where D: Input + BlockInput + FixedOutput + Default,
           D::BlockSize: ArrayLength<u8>,
           D::OutputSize: ArrayLength<u8>
 {
-    digest: D,
-    k: MacResult<D::OutputSize>,
-    v: MacResult<D::OutputSize>,
+    k: GenericArray<u8, D::OutputSize>,
+    v: GenericArray<u8, D::OutputSize>,
     count: usize,
 }
 
-impl<D> HmacDRBG<D>
-    where D: Input + BlockInput + FixedOutput + Default,
-          D::BlockSize: ArrayLength<u8>,
-          D::OutputSize: ArrayLength<u8>
+impl<D> HmacDRBG<D> where
+    D: Input + FixedOutput + BlockInput + Reset + Clone + Default,
+    D::BlockSize: ArrayLength<u8>,
+    D::OutputSize: ArrayLength<u8>
 {
     pub fn new(entropy: &[u8], nonce: &[u8], pers: &[u8]) -> Self {
         let mut k = GenericArray::<u8, D::OutputSize>::default();
@@ -37,9 +32,7 @@ impl<D> HmacDRBG<D>
         }
 
         let mut this = Self {
-            digest: D::default(),
-            k: MacResult::new(k),
-            v: MacResult::new(v),
+            k, v,
             count: 0,
         };
 
@@ -71,13 +64,13 @@ impl<D> HmacDRBG<D>
         let mut i = 0;
         while i < result.len() {
             let mut vmac = self.hmac();
-            vmac.input(self.v.code());
-            self.v = vmac.result();
+            vmac.input(&self.v);
+            self.v = vmac.result().code();
 
-            for j in 0..self.v.code().len() {
-                result[i + j] = self.v.code()[j];
+            for j in 0..self.v.len() {
+                result[i + j] = self.v[j];
             }
-            i += self.v.code().len();
+            i += self.v.len();
         }
 
         match add {
@@ -92,23 +85,23 @@ impl<D> HmacDRBG<D>
     }
 
     fn hmac(&self) -> Hmac<D> {
-        Hmac::new(self.k.code())
+        Hmac::new_varkey(&self.k).expect("Smaller and larger key size are handled by default")
     }
 
     fn update(&mut self, seeds: Option<&[&[u8]]>) {
         let mut kmac = self.hmac();
-        kmac.input(self.v.code());
+        kmac.input(&self.v);
         kmac.input(&[0x00]);
         if let Some(seeds) = seeds {
             for seed in seeds {
                 kmac.input(seed);
             }
         }
-        self.k = kmac.result();
+        self.k = kmac.result().code();
 
         let mut vmac = self.hmac();
-        vmac.input(self.v.code());
-        self.v = vmac.result();
+        vmac.input(&self.v);
+        self.v = vmac.result().code();
 
         if seeds.is_none() {
             return;
@@ -117,15 +110,15 @@ impl<D> HmacDRBG<D>
         let seeds = seeds.unwrap();
 
         let mut kmac = self.hmac();
-        kmac.input(self.v.code());
+        kmac.input(&self.v);
         kmac.input(&[0x01]);
         for seed in seeds {
             kmac.input(seed);
         }
-        self.k = kmac.result();
+        self.k = kmac.result().code();
 
         let mut vmac = self.hmac();
-        vmac.input(self.v.code());
-        self.v = vmac.result();
+        vmac.input(&self.v);
+        self.v = vmac.result().code();
     }
 }

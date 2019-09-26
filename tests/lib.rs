@@ -1,19 +1,7 @@
-extern crate hmac_drbg;
-extern crate sha2;
-extern crate generic_array;
-extern crate hexutil;
-extern crate typenum;
-
 use hmac_drbg::*;
 use sha2::Sha256;
-use generic_array::GenericArray;
-use hexutil::*;
+use serde::Deserialize;
 use typenum::consts::*;
-
-extern crate serde;
-extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
 
 #[test]
 fn test1_sha256() {
@@ -21,7 +9,7 @@ fn test1_sha256() {
         "totally random0123456789".as_bytes(),
         "secret nonce".as_bytes(),
         "my drbg".as_bytes());
-    assert_eq!(drbg.generate::<U32>(None).as_slice(), read_hex("018ec5f8e08c41e5ac974eb129ac297c5388ee1864324fa13d9b15cf98d9a157").unwrap().as_slice());
+    assert_eq!(drbg.generate::<U32>(None).as_slice(), hex::decode("018ec5f8e08c41e5ac974eb129ac297c5388ee1864324fa13d9b15cf98d9a157").unwrap().as_slice());
 }
 
 #[test]
@@ -30,7 +18,7 @@ fn test2_sha256() {
         "totally random0123456789".as_bytes(),
         "secret nonce".as_bytes(),
         &[]);
-    assert_eq!(drbg.generate::<U32>(None).as_slice(), read_hex("ed5d61ecf0ef38258e62f03bbb49f19f2cd07ba5145a840d83b134d5963b3633").unwrap().as_slice());
+    assert_eq!(drbg.generate::<U32>(None).as_slice(), hex::decode("ed5d61ecf0ef38258e62f03bbb49f19f2cd07ba5145a840d83b134d5963b3633").unwrap().as_slice());
 }
 
 #[test]
@@ -65,18 +53,17 @@ fn nist_victors() {
 
     for test in tests {
         let mut drbg = HmacDRBG::<Sha256>::new(
-            &read_hex(&test.entropy).unwrap(),
-            &read_hex(&test.nonce).unwrap(),
-            &read_hex(&test.pers.unwrap_or("".to_string())).unwrap());
-        let mut expected = read_hex(&test.expected).unwrap();
+            &hex::decode(&test.entropy).unwrap(),
+            &hex::decode(&test.nonce).unwrap(),
+            &hex::decode(&test.pers.unwrap_or("".to_string())).unwrap());
+        let expected = hex::decode(&test.expected).unwrap();
         let mut result = Vec::new();
         result.resize(expected.len(), 0);
 
-        let half_len = result.len() / 2;
         let full_len = result.len();
 
-        let add0 = test.add[0].as_ref().map(|v| read_hex(&v).unwrap());
-        let add1 = test.add[1].as_ref().map(|v| read_hex(&v).unwrap());
+        let add0 = test.add[0].as_ref().map(|v| hex::decode(&v).unwrap());
+        let add1 = test.add[1].as_ref().map(|v| hex::decode(&v).unwrap());
 
         drbg.generate_to_slice(&mut result[0..full_len],
                                match add0 {
