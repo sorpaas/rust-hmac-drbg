@@ -1,23 +1,25 @@
 #![no_std]
 
-use digest::{Input, BlockInput, FixedOutput, Reset};
+use digest::{BlockInput, FixedOutput, Input, Reset};
 use generic_array::{ArrayLength, GenericArray};
-use hmac::{Mac, Hmac};
+use hmac::{Hmac, Mac};
 
 pub struct HmacDRBG<D>
-    where D: Input + BlockInput + FixedOutput + Default,
-          D::BlockSize: ArrayLength<u8>,
-          D::OutputSize: ArrayLength<u8>
+where
+    D: Input + BlockInput + FixedOutput + Default,
+    D::BlockSize: ArrayLength<u8>,
+    D::OutputSize: ArrayLength<u8>,
 {
     k: GenericArray<u8, D::OutputSize>,
     v: GenericArray<u8, D::OutputSize>,
     count: usize,
 }
 
-impl<D> HmacDRBG<D> where
+impl<D> HmacDRBG<D>
+where
     D: Input + FixedOutput + BlockInput + Reset + Clone + Default,
     D::BlockSize: ArrayLength<u8>,
-    D::OutputSize: ArrayLength<u8>
+    D::OutputSize: ArrayLength<u8>,
 {
     pub fn new(entropy: &[u8], nonce: &[u8], pers: &[u8]) -> Self {
         let mut k = GenericArray::<u8, D::OutputSize>::default();
@@ -31,10 +33,7 @@ impl<D> HmacDRBG<D> where
             v[i] = 0x01;
         }
 
-        let mut this = Self {
-            k, v,
-            count: 0,
-        };
+        let mut this = Self { k, v, count: 0 };
 
         this.update(Some(&[entropy, nonce, pers]));
         this.count = 1;
@@ -76,10 +75,10 @@ impl<D> HmacDRBG<D> where
         match add {
             Some(add) => {
                 self.update(Some(&[add]));
-            },
+            }
             None => {
                 self.update(None);
-            },
+            }
         }
         self.count += 1;
     }
