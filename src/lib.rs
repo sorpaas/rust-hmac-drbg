@@ -1,12 +1,12 @@
 #![no_std]
 
-use digest::{BlockInput, FixedOutput, Input, Reset};
+use digest::{BlockInput, FixedOutput, Reset, Update};
 use generic_array::{ArrayLength, GenericArray};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, Mac, NewMac};
 
 pub struct HmacDRBG<D>
 where
-    D: Input + BlockInput + FixedOutput + Default,
+    D: Update + BlockInput + FixedOutput + Default,
     D::BlockSize: ArrayLength<u8>,
     D::OutputSize: ArrayLength<u8>,
 {
@@ -17,7 +17,7 @@ where
 
 impl<D> HmacDRBG<D>
 where
-    D: Input + FixedOutput + BlockInput + Reset + Clone + Default,
+    D: Update + FixedOutput + BlockInput + Reset + Clone + Default,
     D::BlockSize: ArrayLength<u8>,
     D::OutputSize: ArrayLength<u8>,
 {
@@ -63,8 +63,8 @@ where
         let mut i = 0;
         while i < result.len() {
             let mut vmac = self.hmac();
-            vmac.input(&self.v);
-            self.v = vmac.result().code();
+            vmac.update(&self.v);
+            self.v = vmac.finalize().into_bytes();
 
             for j in 0..self.v.len() {
                 result[i + j] = self.v[j];
@@ -89,18 +89,18 @@ where
 
     fn update(&mut self, seeds: Option<&[&[u8]]>) {
         let mut kmac = self.hmac();
-        kmac.input(&self.v);
-        kmac.input(&[0x00]);
+        kmac.update(&self.v);
+        kmac.update(&[0x00]);
         if let Some(seeds) = seeds {
             for seed in seeds {
-                kmac.input(seed);
+                kmac.update(seed);
             }
         }
-        self.k = kmac.result().code();
+        self.k = kmac.finalize().into_bytes();
 
         let mut vmac = self.hmac();
-        vmac.input(&self.v);
-        self.v = vmac.result().code();
+        vmac.update(&self.v);
+        self.v = vmac.finalize().into_bytes();
 
         if seeds.is_none() {
             return;
@@ -109,15 +109,15 @@ where
         let seeds = seeds.unwrap();
 
         let mut kmac = self.hmac();
-        kmac.input(&self.v);
-        kmac.input(&[0x01]);
+        kmac.update(&self.v);
+        kmac.update(&[0x01]);
         for seed in seeds {
-            kmac.input(seed);
+            kmac.update(seed);
         }
-        self.k = kmac.result().code();
+        self.k = kmac.finalize().into_bytes();
 
         let mut vmac = self.hmac();
-        vmac.input(&self.v);
-        self.v = vmac.result().code();
+        vmac.update(&self.v);
+        self.v = vmac.finalize().into_bytes();
     }
 }
