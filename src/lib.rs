@@ -84,7 +84,7 @@ where
     }
 
     fn hmac(&self) -> Hmac<D> {
-        Hmac::new_varkey(&self.k).expect("Smaller and larger key size are handled by default")
+        Hmac::new_from_slice(&self.k).expect("Smaller and larger key size are handled by default")
     }
 
     fn update(&mut self, seeds: Option<&[&[u8]]>) {
