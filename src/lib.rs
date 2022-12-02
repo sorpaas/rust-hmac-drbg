@@ -1,29 +1,48 @@
 #![no_std]
 
-use digest::{BlockInput, FixedOutput, Reset, Update};
+use digest::{
+    block_buffer::Eager,
+    core_api::{BlockSizeUser, BufferKindUser, CoreProxy, FixedOutputCore, UpdateCore},
+    generic_array::typenum::{IsLess, Le, NonZero, U256},
+    HashMarker, OutputSizeUser,
+};
 use generic_array::{ArrayLength, GenericArray};
-use hmac::{Hmac, Mac, NewMac};
+use hmac::{Hmac, Mac};
 
 pub struct HmacDRBG<D>
 where
-    D: Update + BlockInput + FixedOutput + Default,
-    D::BlockSize: ArrayLength<u8>,
-    D::OutputSize: ArrayLength<u8>,
+    D: CoreProxy,
+    D::Core: Sync
+        + HashMarker
+        + UpdateCore
+        + FixedOutputCore
+        + BufferKindUser<BufferKind = Eager>
+        + Default
+        + Clone,
+    <D::Core as BlockSizeUser>::BlockSize: IsLess<U256>,
+    Le<<D::Core as BlockSizeUser>::BlockSize, U256>: NonZero,
 {
-    k: GenericArray<u8, D::OutputSize>,
-    v: GenericArray<u8, D::OutputSize>,
+    k: GenericArray<u8, <D::Core as OutputSizeUser>::OutputSize>,
+    v: GenericArray<u8, <D::Core as OutputSizeUser>::OutputSize>,
     count: usize,
 }
 
 impl<D> HmacDRBG<D>
 where
-    D: Update + FixedOutput + BlockInput + Reset + Clone + Default,
-    D::BlockSize: ArrayLength<u8>,
-    D::OutputSize: ArrayLength<u8>,
+    D: CoreProxy,
+    D::Core: Sync
+        + HashMarker
+        + UpdateCore
+        + FixedOutputCore
+        + BufferKindUser<BufferKind = Eager>
+        + Default
+        + Clone,
+    <D::Core as BlockSizeUser>::BlockSize: IsLess<U256>,
+    Le<<D::Core as BlockSizeUser>::BlockSize, U256>: NonZero,
 {
     pub fn new(entropy: &[u8], nonce: &[u8], pers: &[u8]) -> Self {
-        let mut k = GenericArray::<u8, D::OutputSize>::default();
-        let mut v = GenericArray::<u8, D::OutputSize>::default();
+        let mut k = GenericArray::<u8, <D::Core as OutputSizeUser>::OutputSize>::default();
+        let mut v = GenericArray::<u8, <D::Core as OutputSizeUser>::OutputSize>::default();
 
         for i in 0..k.as_slice().len() {
             k[i] = 0x0;
@@ -46,7 +65,7 @@ where
     }
 
     pub fn reseed(&mut self, entropy: &[u8], add: Option<&[u8]>) {
-        self.update(Some(&[entropy, add.unwrap_or(&[])]))
+        self.update(Some(&[entropy, add.unwrap_or(&[])]));
     }
 
     pub fn generate<T: ArrayLength<u8>>(&mut self, add: Option<&[u8]>) -> GenericArray<u8, T> {
@@ -84,7 +103,7 @@ where
     }
 
     fn hmac(&self) -> Hmac<D> {
-        Hmac::new_varkey(&self.k).expect("Smaller and larger key size are handled by default")
+        Hmac::new_from_slice(&self.k).expect("Smaller and larger key size are handled by default")
     }
 
     fn update(&mut self, seeds: Option<&[&[u8]]>) {
